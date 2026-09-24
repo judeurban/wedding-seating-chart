@@ -1,0 +1,4 @@
+charset-normalizer==3.5.1
+pillow==11.3.0
+PyMuPDF==1.26.5
+reportlab==5.0.1
