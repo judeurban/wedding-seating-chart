@@ -14,25 +14,25 @@
 | 6 | Rectangle | 8 |
 | 7 | Rectangle | 8 |
 | 8 | Rectangle | 8 |
-| 9 | Rectangle | 8 |
-| 10 | Circle | 8 |
-| 11 | Circle | 8 |
-| 12 | Circle | 8 |
-| 13 | Circle | 8 |
-| 14 | Circle | 8 |
-| 15 | Circle | 8 |
-| 16 | Circle | 8 |
-| 17 | Circle | 8 |
-| 18 | Circle | 8 |
-| 19 | Circle | 8 |
-| 20 | Circle | 8 |
-| 21 | Circle | 8 |
-| 22 | Circle | 8 |
-| 23 | Circle | 8 |
-| 24 | Circle | 8 |
-| 25 | Circle | 8 |
-| 26 | Circle | 8 |
-| 27 | Circle | 8 |
+| 9 | Circle | 10 |
+| 10 | Circle | 10 |
+| 11 | Circle | 10 |
+| 12 | Circle | 10 |
+| 13 | Circle | 10 |
+| 14 | Circle | 10 |
+| 15 | Circle | 10 |
+| 16 | Circle | 10 |
+| 17 | Circle | 10 |
+| 18 | Circle | 10 |
+| 19 | Circle | 10 |
+| 20 | Circle | 10 |
+| 21 | Circle | 10 |
+| 22 | Circle | 10 |
+| 23 | Circle | 10 |
+| 24 | Circle | 10 |
+| 25 | Circle | 10 |
+| 26 | Circle | 10 |
+| 27 | Circle | 10 |
 
 **Dimensions**
 | Type | Dimensions |
@@ -41,9 +41,15 @@
 | Rectangle | 2.5 ft x 8ft |
 
 **Special Tables**
-| Sweetheart|
+| Table | Seats |
 | -- | -- |
 | Semi-circle | 2 |
 | Cake | Circle | 0 |
+
+# venue floor space dimensions
+
+from the standing at the entrance, looking toward the room.
+- 50 ft wide (left, right)
+- 54 ft deep (forward, backwards)
 
 Note that vendors, denoted by `V` are not seated. They can find an open seat or eat at their station.

@@ -34,8 +34,8 @@ FONT_BODY = "Times-Roman"
 FONT_ITALIC = "Times-Italic"
 
 RECT_TABLES = list(range(1, 9))  # vertical rectangles, 4 seats/side
-HORIZ_TABLE = 9  # landscape rectangle, 4 seats/side
-CIRCLE_TABLES = list(range(10, 28))
+CIRCLE_TABLES = list(range(9, 28))
+CIRCLE_SEATS = 10
 TABLE_ORDER = [str(n) for n in range(1, 28)] + ["Sweetheart"]
 
 
@@ -57,12 +57,12 @@ def load_guests():
             last = row["Last Name"].strip()
             rsvp = row["RSVP"].strip()
             tables.setdefault(table, []).append({
-                "seat": int(seat),
+                "seat": int(seat) if seat else None,
                 "name": f"{first} {last}".strip(),
                 "rsvp": rsvp,
             })
     for guest_list in tables.values():
-        guest_list.sort(key=lambda g: g["seat"])
+        guest_list.sort(key=lambda g: (g["seat"] is None, g["seat"] or 0))
     return tables
 
 
@@ -168,17 +168,9 @@ def draw_floor_plan(c):
     c.restoreState()
 
     center_x = PAGE_W / 2
-    col_gap = 34
-    right_col_x = center_x + col_gap
-    left_col_x = center_x - col_gap
 
-    rect_w, rect_h = 30, 88
-    row_gap = 10
-    top_y = PAGE_H - 160
-
-    # Sweetheart table
     sweetheart_r = 24
-    sweetheart_cy = top_y + 30
+    sweetheart_cy = PAGE_H - 112
     c.setFillColor(CARD_BG)
     c.setStrokeColor(MAROON)
     c.setLineWidth(1.4)
@@ -191,34 +183,31 @@ def draw_floor_plan(c):
     c.setFont(FONT_TITLE, 7)
     c.drawCentredString(center_x, sweetheart_cy - 4, "Sweetheart")
 
-    # Rectangular table columns (1,3,5,7 right; 2,4,6,8 left)
-    right_labels = [1, 3, 5, 7]
-    left_labels = [2, 4, 6, 8]
-    for i in range(4):
-        cy = top_y - i * (rect_h + row_gap) - rect_h / 2
-        draw_rect_floor(c, right_col_x, cy, rect_w, rect_h, right_labels[i])
-        draw_rect_floor(c, left_col_x, cy, rect_w, rect_h, left_labels[i])
+    # Rectangular tables across the top: two rows of four landscape tables.
+    table_x = [90, 200, 412, 522]
+    for x, label in zip(table_x, [1, 2, 5, 6]):
+        draw_rect_floor(c, x, 630, 92, 28, label)
+    for x, label in zip(table_x, [3, 4, 7, 8]):
+        draw_rect_floor(c, x, 574, 92, 28, label)
 
-    col_bottom_y = top_y - 3 * (rect_h + row_gap) - rect_h
+    # Dance floor below the rectangular tables.
+    c.setFillColor(HexColor("#fce6eb"))
+    c.setStrokeColor(HexColor("#b88d91"))
+    c.setLineWidth(1)
+    c.rect(center_x - 62, 458, 124, 92, fill=1, stroke=1)
+    c.setFillColor(MAROON_DARK)
+    c.setFont(FONT_BODY, 12)
+    c.drawCentredString(center_x, 500, "Dance Floor")
 
-    # Table 9: landscape rectangle centered below both columns
-    t9_w, t9_h = 100, 26
-    t9_cy = col_bottom_y - 34
-    draw_rect_floor(c, center_x, t9_cy, t9_w, t9_h, 9)
-
-    # Circle rings flanking the columns: left = 10-18, right = 19-27
-    circle_d = 34
-    circle_gap = 8
-    ring_top_y = top_y - 6
-    ring_span_bottom = t9_cy - t9_h / 2
-    n = 9
-    step = (ring_top_y - ring_span_bottom) / (n - 1)
-    left_ring_x = left_col_x - col_gap - rect_w / 2 - circle_d / 2 - circle_gap
-    right_ring_x = right_col_x + col_gap + rect_w / 2 + circle_d / 2 + circle_gap
-    for i in range(n):
-        cy = ring_top_y - i * step
-        draw_circle_floor(c, left_ring_x, cy, circle_d / 2, 10 + i)
-        draw_circle_floor(c, right_ring_x, cy, circle_d / 2, 19 + i)
+    # Staggered rows spread circular tables throughout the middle of the room.
+    circle_positions = [
+        (90, 420), (200, 420), (310, 420), (420, 420), (522, 420),
+        (145, 330), (255, 330), (365, 330), (475, 330),
+        (90, 240), (200, 240), (310, 240), (420, 240), (522, 240),
+        (90, 150), (200, 150), (310, 150), (420, 150), (522, 150),
+    ]
+    for table_num, (x, y) in zip(CIRCLE_TABLES, circle_positions):
+        draw_circle_floor(c, x, y, 17, table_num)
 
 
 def draw_rect_floor(c, cx, cy, w, h, label):
@@ -286,7 +275,7 @@ def draw_circle_table_page(c, table_num, guest_list):
 
     cx, cy = PAGE_W / 2, PAGE_H / 2 + 30
     r = 175
-    n = seat_capacity(guest_list, base=8)
+    n = seat_capacity(guest_list, base=CIRCLE_SEATS)
     draw_table_header(c, f"Table {table_num}", f"{len(guest_list)} of {n} seats assigned")
 
     c.setFillColor(BG)
@@ -382,10 +371,10 @@ def main():
             draw_sweetheart_page(c, guest_list)
         else:
             n = int(table_key)
-            if n in CIRCLE_TABLES:
-                draw_circle_table_page(c, n, guest_list)
+            if n in RECT_TABLES:
+                draw_rect_table_page(c, n, guest_list, horizontal=False)
             else:
-                draw_rect_table_page(c, n, guest_list, horizontal=(n == HORIZ_TABLE))
+                draw_circle_table_page(c, n, guest_list)
         c.showPage()
 
     c.save()
