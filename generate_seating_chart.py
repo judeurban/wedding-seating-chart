@@ -72,6 +72,12 @@ def seat_capacity(guest_list, base):
     return max(base, len(guest_list))
 
 
+def assigned_seat_number(position, guest):
+    if guest and guest["seat"] is not None:
+        return guest["seat"]
+    return position + 1
+
+
 # ---------------------------------------------------------------------------
 # Shared chrome: page background, dotted rules, day-card panels
 # ---------------------------------------------------------------------------
@@ -259,7 +265,8 @@ def draw_floor_plan_guest_names(c, tables, rect_positions, circle_positions):
             name = guest["name"] if guest else "Open"
             side, _ = rect_side_split(position, n)
             label_y = sy + 8 if side == 1 else sy - 8
-            draw_rotated_guest_label(c, sx, label_y, f"{position + 1}. {name}", 90, 2.5)
+            seat_number = assigned_seat_number(position, guest)
+            draw_rotated_guest_label(c, sx, label_y, f"{seat_number}. {name}", 90, 2.5)
 
     for table_num, (cx, cy) in zip(CIRCLE_TABLES, circle_positions):
         guest_list = tables.get(str(table_num), [])
@@ -272,7 +279,8 @@ def draw_floor_plan_guest_names(c, tables, rect_positions, circle_positions):
             c.circle(sx, sy, 1.2, fill=1, stroke=0)
             guest = guest_list[position] if position < len(guest_list) else None
             name = guest["name"] if guest else "Open"
-            label = f"{position + 1}. {name}"
+            seat_number = assigned_seat_number(position, guest)
+            label = f"{seat_number}. {name}"
             font_size = 2.5
             label_width = c.stringWidth(label, FONT_BODY, font_size)
             label_radius = 17 + 2.5 + 4 + label_width / 2
@@ -292,7 +300,8 @@ def draw_floor_plan_guest_names(c, tables, rect_positions, circle_positions):
         name = guest["name"] if guest else "Open"
         c.setFillColor(MAROON_DARK)
         c.setFont(FONT_BODY, 2.2)
-        c.drawCentredString(PAGE_W / 2, sweetheart_cy - 12 - position * 6, f"{position + 1}. {name}")
+        seat_number = assigned_seat_number(position, guest)
+        c.drawCentredString(PAGE_W / 2, sweetheart_cy - 12 - position * 6, f"{seat_number}. {name}")
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +364,7 @@ def draw_circle_table_page(c, table_num, guest_list):
         lx, ly = circle_seat_pos(cx, cy, r + 20, position, n=n)
         anchor = circle_anchor(sx, sy, cx, cy)
         guest = guest_list[position] if position < len(guest_list) else None
-        seat_label(c, lx, ly, position + 1, guest, anchor)
+        seat_label(c, lx, ly, assigned_seat_number(position, guest), guest, anchor)
 
 
 def draw_rect_table_page(c, table_num, guest_list, horizontal):
@@ -391,7 +400,7 @@ def draw_rect_table_page(c, table_num, guest_list, horizontal):
             lx, ly = pos_fn(cx, cy, w + 40, h + 30, position, n=n)
             anchor = "left" if side == 0 else "right"
         guest = guest_list[position] if position < len(guest_list) else None
-        seat_label(c, lx, ly, position + 1, guest, anchor)
+        seat_label(c, lx, ly, assigned_seat_number(position, guest), guest, anchor)
 
 
 def draw_sweetheart_page(c, guest_list):
@@ -417,7 +426,7 @@ def draw_sweetheart_page(c, guest_list):
         c.setFillColor(MAROON)
         c.circle(sx, sy, 6, fill=1, stroke=0)
         guest = guest_list[position] if position < len(guest_list) else None
-        seat_label(c, sx, cy - r - 10, position + 1, guest, "bottom")
+        seat_label(c, sx, cy - r - 10, assigned_seat_number(position, guest), guest, "bottom")
 
 
 # ---------------------------------------------------------------------------
