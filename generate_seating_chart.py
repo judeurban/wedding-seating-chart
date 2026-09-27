@@ -6,7 +6,8 @@ deep maroon ink/accents, serif type, dotted rules, and rounded "day-card"
 style panels.
 
 Page 1: floor plan of all tables (no seats).
-Remaining pages: one per table showing each seat's assigned guest.
+Pages 2-25: one per table showing each seat's assigned guest.
+Final page: zoomable floor plan with seat-level guest names.
 """
 import csv
 import math
@@ -147,7 +148,7 @@ def rect_seat_pos_horizontal(cx, cy, width, height, position, n=8):
 # Page 1: floor plan
 # ---------------------------------------------------------------------------
 
-def draw_floor_plan(c):
+def draw_floor_plan(c, tables=None):
     draw_page_background(c)
 
     c.setFont(FONT_TITLE, 22)
@@ -185,30 +186,35 @@ def draw_floor_plan(c):
 
     # Groom's tables (1-4) on the left and bride's tables (5-8) on the right.
     table_x = [90, 200, 412, 522]
-    for x, label in zip(table_x, [1, 2, 5, 6]):
-        draw_rect_floor(c, x, 630, 92, 28, label)
+    rect_top_y = 640 if tables is not None else 630
+    rect_bottom_y = 560 if tables is not None else 574
+    rect_positions = {}
+    for x, label in zip(table_x, [2, 1, 5, 6]):
+        rect_positions[str(label)] = (x, rect_top_y)
+        draw_rect_floor(c, x, rect_top_y, 92, 28, label)
     for x, label in zip(table_x, [3, 4, 7, 8]):
-        draw_rect_floor(c, x, 574, 92, 28, label)
+        rect_positions[str(label)] = (x, rect_bottom_y)
+        draw_rect_floor(c, x, rect_bottom_y, 92, 28, label)
 
     # Keep the dance floor in the gap between the two groups of rectangles.
     c.setFillColor(HexColor("#fce6eb"))
     c.setStrokeColor(HexColor("#b88d91"))
     c.setLineWidth(1)
-    c.rect(center_x - 62, 556, 124, 92, fill=1, stroke=1)
+    c.rect(center_x - 56, 556, 112, 92, fill=1, stroke=1)
     c.setFillColor(MAROON_DARK)
     c.setFont(FONT_BODY, 12)
     c.drawCentredString(center_x, 598, "Dance Floor")
 
     # Five columns of three 10-person tables, numbered north to south.
+    circle_rows = [430, 326, 222] if tables is not None else [420, 330, 240]
     circle_positions = [
-        (90, 420), (90, 330), (90, 240),
-        (200, 420), (200, 330), (200, 240),
-        (306, 420), (306, 330), (306, 240),
-        (412, 420), (412, 330), (412, 240),
-        (522, 420), (522, 330), (522, 240),
+        (x, y) for x in [90, 200, 306, 412, 522] for y in circle_rows
     ]
     for table_num, (x, y) in zip(CIRCLE_TABLES, circle_positions):
         draw_circle_floor(c, x, y, 17, table_num)
+
+    if tables is not None:
+        draw_floor_plan_guest_names(c, tables, rect_positions, circle_positions)
 
 
 def draw_rect_floor(c, cx, cy, w, h, label):
@@ -229,6 +235,64 @@ def draw_circle_floor(c, cx, cy, r, label):
     c.setFillColor(MAROON)
     c.setFont(FONT_TITLE, 9)
     c.drawCentredString(cx, cy - 3, str(label))
+
+
+def draw_rotated_guest_label(c, x, y, text, rotation, font_size):
+    c.saveState()
+    c.translate(x, y)
+    c.rotate(rotation)
+    c.setFillColor(MAROON_DARK)
+    c.setFont(FONT_BODY, font_size)
+    c.drawCentredString(0, -font_size * 0.35, text)
+    c.restoreState()
+
+
+def draw_floor_plan_guest_names(c, tables, rect_positions, circle_positions):
+    for table_key, (cx, cy) in rect_positions.items():
+        guest_list = tables.get(table_key, [])
+        n = seat_capacity(guest_list, base=8)
+        for position in range(n):
+            sx, sy = rect_seat_pos_horizontal(cx, cy, 92, 28, position, n=n)
+            c.setFillColor(MAROON_DARK)
+            c.circle(sx, sy, 1.4, fill=1, stroke=0)
+            guest = guest_list[position] if position < len(guest_list) else None
+            name = guest["name"] if guest else "Open"
+            side, _ = rect_side_split(position, n)
+            label_y = sy + 8 if side == 1 else sy - 8
+            draw_rotated_guest_label(c, sx, label_y, f"{position + 1}. {name}", 90, 2.5)
+
+    for table_num, (cx, cy) in zip(CIRCLE_TABLES, circle_positions):
+        guest_list = tables.get(str(table_num), [])
+        n = seat_capacity(guest_list, base=CIRCLE_SEATS)
+        for position in range(n):
+            angle = math.radians(90 - (360 / n) * position)
+            sx = cx + (17 + 2.5) * math.cos(angle)
+            sy = cy + (17 + 2.5) * math.sin(angle)
+            c.setFillColor(MAROON_DARK)
+            c.circle(sx, sy, 1.2, fill=1, stroke=0)
+            guest = guest_list[position] if position < len(guest_list) else None
+            name = guest["name"] if guest else "Open"
+            label = f"{position + 1}. {name}"
+            font_size = 2.5
+            label_width = c.stringWidth(label, FONT_BODY, font_size)
+            label_radius = 17 + 2.5 + 4 + label_width / 2
+            lx = cx + label_radius * math.cos(angle)
+            ly = cy + label_radius * math.sin(angle)
+            rotation = 90 - (360 / n) * position
+            if rotation > 90:
+                rotation -= 180
+            elif rotation < -90:
+                rotation += 180
+            draw_rotated_guest_label(c, lx, ly, label, rotation, font_size)
+
+    sweetheart_guests = tables.get("Sweetheart", [])
+    sweetheart_cy = PAGE_H - 112
+    for position in range(seat_capacity(sweetheart_guests, base=2)):
+        guest = sweetheart_guests[position] if position < len(sweetheart_guests) else None
+        name = guest["name"] if guest else "Open"
+        c.setFillColor(MAROON_DARK)
+        c.setFont(FONT_BODY, 2.2)
+        c.drawCentredString(PAGE_W / 2, sweetheart_cy - 12 - position * 6, f"{position + 1}. {name}")
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +441,9 @@ def main():
             else:
                 draw_circle_table_page(c, n, guest_list)
         c.showPage()
+
+    draw_floor_plan(c, tables)
+    c.showPage()
 
     c.save()
     print(f"Wrote {OUT_PATH}")
