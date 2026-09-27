@@ -29,10 +29,6 @@
 | 21 | Circle | 10 |
 | 22 | Circle | 10 |
 | 23 | Circle | 10 |
-| 24 | Circle | 10 |
-| 25 | Circle | 10 |
-| 26 | Circle | 10 |
-| 27 | Circle | 10 |
 
 **Dimensions**
 | Type | Dimensions |

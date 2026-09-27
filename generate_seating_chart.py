@@ -33,10 +33,10 @@ FONT_TITLE = "Times-Bold"
 FONT_BODY = "Times-Roman"
 FONT_ITALIC = "Times-Italic"
 
-RECT_TABLES = list(range(1, 9))  # vertical rectangles, 4 seats/side
-CIRCLE_TABLES = list(range(9, 28))
+RECT_TABLES = list(range(1, 9))  # horizontal rectangles, 4 seats/side
+CIRCLE_TABLES = list(range(9, 24))
 CIRCLE_SEATS = 10
-TABLE_ORDER = [str(n) for n in range(1, 28)] + ["Sweetheart"]
+TABLE_ORDER = [str(n) for n in range(1, 24)] + ["Sweetheart"]
 
 
 def load_guests():
@@ -183,28 +183,29 @@ def draw_floor_plan(c):
     c.setFont(FONT_TITLE, 7)
     c.drawCentredString(center_x, sweetheart_cy - 4, "Sweetheart")
 
-    # Rectangular tables across the top: two rows of four landscape tables.
+    # Groom's tables (1-4) on the left and bride's tables (5-8) on the right.
     table_x = [90, 200, 412, 522]
     for x, label in zip(table_x, [1, 2, 5, 6]):
         draw_rect_floor(c, x, 630, 92, 28, label)
     for x, label in zip(table_x, [3, 4, 7, 8]):
         draw_rect_floor(c, x, 574, 92, 28, label)
 
-    # Dance floor below the rectangular tables.
+    # Keep the dance floor in the gap between the two groups of rectangles.
     c.setFillColor(HexColor("#fce6eb"))
     c.setStrokeColor(HexColor("#b88d91"))
     c.setLineWidth(1)
-    c.rect(center_x - 62, 458, 124, 92, fill=1, stroke=1)
+    c.rect(center_x - 62, 556, 124, 92, fill=1, stroke=1)
     c.setFillColor(MAROON_DARK)
     c.setFont(FONT_BODY, 12)
-    c.drawCentredString(center_x, 500, "Dance Floor")
+    c.drawCentredString(center_x, 598, "Dance Floor")
 
-    # Staggered rows spread circular tables throughout the middle of the room.
+    # Five columns of three 10-person tables, numbered north to south.
     circle_positions = [
-        (90, 420), (200, 420), (310, 420), (420, 420), (522, 420),
-        (145, 330), (255, 330), (365, 330), (475, 330),
-        (90, 240), (200, 240), (310, 240), (420, 240), (522, 240),
-        (90, 150), (200, 150), (310, 150), (420, 150), (522, 150),
+        (90, 420), (90, 330), (90, 240),
+        (200, 420), (200, 330), (200, 240),
+        (306, 420), (306, 330), (306, 240),
+        (412, 420), (412, 330), (412, 240),
+        (522, 420), (522, 330), (522, 240),
     ]
     for table_num, (x, y) in zip(CIRCLE_TABLES, circle_positions):
         draw_circle_floor(c, x, y, 17, table_num)
@@ -372,7 +373,7 @@ def main():
         else:
             n = int(table_key)
             if n in RECT_TABLES:
-                draw_rect_table_page(c, n, guest_list, horizontal=False)
+                draw_rect_table_page(c, n, guest_list, horizontal=True)
             else:
                 draw_circle_table_page(c, n, guest_list)
         c.showPage()
