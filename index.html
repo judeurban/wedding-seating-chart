@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reception Seating Editor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fcf4e3;
+      --card: #fffbf1;
+      --ink: #542d29;
+      --red: #a62c25;
+      --red-dark: #81221d;
+      --line: #d9b9a8;
+      --rose: #fce6eb;
+      --green: #365c48;
+      --shadow: 0 12px 32px #542d2912;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: var(--paper);
+      font: 15px/1.45 Georgia, "Times New Roman", serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px clamp(16px, 4vw, 48px);
+      border-bottom: 1px dotted var(--red);
+      background: #fffbf1cc;
+    }
+
+    .brand h1 { margin: 0; color: var(--red); font-size: 22px; font-weight: 600; }
+    .brand p { margin: 3px 0 0; color: #795a52; font-size: 13px; }
+
+    .actions { display: flex; align-items: center; gap: 9px; }
+    .button {
+      min-height: 40px;
+      padding: 8px 14px;
+      border: 1px solid var(--red);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--red-dark);
+      cursor: pointer;
+    }
+    .button:hover:not(:disabled) { background: #f6e4d7; }
+    .button.primary { background: var(--red); color: white; }
+    .button.primary:hover:not(:disabled) { background: var(--red-dark); }
+    .button:disabled { cursor: not-allowed; opacity: .45; }
+
+    .status {
+      max-width: 250px;
+      overflow: hidden;
+      color: #795a52;
+      font: 12px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-overflow: ellipsis;
+    }
+    .status.dirty { color: var(--red-dark); font-weight: 600; }
+
+    main { width: min(1320px, 100%); margin: 0 auto; padding: 22px clamp(12px, 3vw, 34px) 40px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(300px, 1fr) minmax(320px, 390px);
+      align-items: start;
+      gap: clamp(16px, 3vw, 34px);
+    }
+
+    .plan-section h2, .editor h2 { margin: 0; color: var(--red-dark); font-size: 20px; font-weight: 600; }
+    .section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 12px; }
+    .section-heading span { color: #795a52; font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    .venue {
+      position: relative;
+      width: min(100%, 610px);
+      margin: 0 auto;
+      aspect-ratio: 612 / 792;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background-color: #fffaf0;
+      background-image: linear-gradient(#a62c250a 1px, transparent 1px), linear-gradient(90deg, #a62c250a 1px, transparent 1px);
+      background-size: 22px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .venue-label {
+      position: absolute;
+      color: #795a52;
+      font: 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 1.3px;
+      text-align: center;
+    }
+    .windows { top: 2.2%; left: 0; width: 100%; }
+    .entrance { bottom: 2.2%; left: 0; width: 100%; }
+    .cocktail {
+      top: 44%; left: 1.8%;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    .dance-floor {
+      position: absolute;
+      top: 24.5%; left: 50%;
+      display: grid;
+      width: 18.4%; height: 11.6%;
+      place-items: center;
+      transform: translate(-50%, -50%);
+      border: 1px solid #b88d91;
+      background: var(--rose);
+      color: var(--red-dark);
+      font-size: clamp(8px, 1.3vw, 13px);
+    }
+
+    .table-button {
+      position: absolute;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1.5px solid var(--red);
+      background: var(--card);
+      color: var(--red-dark);
+      cursor: pointer;
+      transition: background .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .table-button:hover, .table-button:focus-visible {
+      z-index: 2;
+      background: #f8e1d3;
+      box-shadow: 0 0 0 3px #a62c2520;
+      transform: translate(-50%, -50%) scale(1.06);
+    }
+    .table-button.selected { background: var(--red); color: white; }
+    .table-button.rect { width: 15%; height: 3.7%; border-radius: 2px; font-size: clamp(9px, 1.3vw, 13px); }
+    .table-button.circle { width: 6.1%; aspect-ratio: 1; border-radius: 50%; font-size: clamp(8px, 1.25vw, 12px); }
+    .table-button.sweetheart {
+      top: 14.1%; left: 50%;
+      width: 14%; height: 3.6%;
+      border-radius: 0 0 50% 50%;
+      font-size: clamp(7px, 1vw, 10px);
+    }
+    .guest-count {
+      position: absolute;
+      top: calc(100% + 3px);
+      color: #795a52;
+      font: 9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      white-space: nowrap;
+    }
+
+    .editor {
+      min-height: 340px;
+      border-top: 5px solid var(--red);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .editor-inner { padding: 16px; }
+    .editor-empty { padding: 22px 18px; color: #795a52; font-size: 14px; }
+    .editor-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .close-editor {
+      width: 32px; height: 32px; flex: 0 0 auto;
+      border: 1px solid var(--line); border-radius: 3px;
+      background: transparent; cursor: pointer;
+    }
+    .table-meta { margin: 4px 0 14px; color: #795a52; font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    .diagram {
+      position: relative;
+      width: 100%; height: 250px;
+      margin: 0 0 16px;
+      overflow: hidden;
+      border: 1px solid #ead8c8;
+      background: #fcf4e3;
+    }
+    .diagram-table {
+      position: absolute; top: 50%; left: 50%;
+      display: grid; place-items: center;
+      border: 2px solid var(--red);
+      background: #fffbf1;
+      color: var(--red-dark);
+      font-size: 14px;
+      transform: translate(-50%, -50%);
+    }
+    .diagram-table.circle { width: 34%; aspect-ratio: 1; border-radius: 50%; }
+    .diagram-table.rect { width: 48%; height: 24%; }
+    .diagram-table.sweetheart { width: 44%; height: 22%; border-radius: 0 0 50% 50%; }
+    .seat-label {
+      position: absolute;
+      display: grid;
+      width: 72px; min-height: 34px;
+      padding: 3px 4px;
+      place-content: center;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: var(--card);
+      color: var(--ink);
+      font: 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+      transform: translate(-50%, -50%);
+    }
+    .seat-label.rect-seat { width: 62px; }
+    .seat-label strong { color: var(--red); font-size: 9px; }
+    .seat-label.open { color: #927c70; font-style: italic; }
+
+    .roster-heading { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 6px; color: var(--red-dark); font-size: 14px; }
+    .roster-note { margin: 0 0 9px; color: #795a52; font: 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .roster { display: grid; gap: 5px; max-height: 42vh; overflow: auto; padding-right: 2px; }
+    .guest-row {
+      display: grid;
+      grid-template-columns: minmax(85px, 1fr) 92px 64px;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 0;
+      border-top: 1px dotted #d9b9a8;
+    }
+    .guest-name { overflow: hidden; font: 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+    .guest-name small { display: block; color: #927c70; font-size: 10px; }
+    .guest-row select, .guest-row input {
+      width: 100%; min-width: 0; height: 32px;
+      padding: 3px 5px;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      background: white;
+      color: var(--ink);
+      font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .column-labels {
+      display: grid;
+      grid-template-columns: minmax(85px, 1fr) 92px 64px;
+      gap: 6px;
+      color: #795a52;
+      font: 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .column-labels span:nth-child(n+2) { text-align: center; }
+    .message { min-height: 18px; margin: 8px 0 0; color: var(--red-dark); font: 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    .welcome {
+      display: grid;
+      min-height: 45vh;
+      place-content: center;
+      gap: 8px;
+      padding: 24px;
+      border: 1px dashed var(--line);
+      color: #795a52;
+      text-align: center;
+    }
+    .welcome strong { color: var(--red-dark); font-size: 18px; font-weight: 600; }
+    .welcome p { max-width: 270px; margin: 0 auto; font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .file-input { display: none; }
+
+    @media (max-width: 780px) {
+      .topbar { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .actions { width: 100%; flex-wrap: wrap; }
+      .status { order: 3; width: 100%; max-width: none; }
+      .workspace { grid-template-columns: minmax(0, 1fr); }
+      .venue { width: min(100%, 500px); }
+      .editor { width: min(100%, 610px); margin: 0 auto; }
+      .roster { max-height: none; }
+    }
+
+    @media (max-width: 420px) {
+      .brand h1 { font-size: 20px; }
+      .button { min-height: 38px; padding: 7px 10px; }
+      .guest-row { grid-template-columns: minmax(76px, 1fr) 82px 58px; gap: 4px; }
+      .column-labels { grid-template-columns: minmax(76px, 1fr) 82px 58px; gap: 4px; }
+      .seat-label { width: 58px; min-height: 30px; font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Reception Seating</h1>
+      <p>Jessie &amp; Jude · Tulsa, Oklahoma</p>
+    </div>
+    <div class="actions">
+      <button class="button" id="open-button" type="button">Open CSV</button>
+      <button class="button primary" id="save-button" type="button" disabled>Save</button>
+      <span class="status" id="file-status" aria-live="polite">Choose the seating CSV to begin.</span>
+    </div>
+    <input class="file-input" id="file-input" type="file" accept=".csv,text/csv">
+  </header>
+
+  <main>
+    <div class="workspace">
+      <section class="plan-section" aria-labelledby="plan-title">
+        <div class="section-heading">
+          <h2 id="plan-title">Reception Floor Plan</h2>
+          <span id="guest-total">Open a CSV to see assignments</span>
+        </div>
+        <div class="venue" id="venue" aria-label="Interactive reception floor plan">
+          <span class="venue-label windows">WINDOWS</span>
+          <span class="venue-label cocktail">COCKTAIL HOUR DOORS</span>
+          <span class="venue-label entrance">ENTRANCE DOORS</span>
+          <div class="dance-floor">Dance Floor</div>
+        </div>
+      </section>
+
+      <section class="editor" id="editor" aria-live="polite">
+        <div class="editor-empty" id="editor-empty">
+          <h2>Choose a table</h2>
+          <p>Open the CSV, then select a table on the floor plan to see and edit its seating.</p>
+        </div>
+        <div class="editor-inner" id="editor-content" hidden></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const TABLES = Array.from({ length: 23 }, (_, index) => String(index + 1));
+    const RECT_TABLES = new Set(Array.from({ length: 8 }, (_, index) => String(index + 1)));
+    const SEATED_TABLES = [...TABLES, "Sweetheart"];
+    const venue = document.getElementById("venue");
+    const editorContent = document.getElementById("editor-content");
+    const editorEmpty = document.getElementById("editor-empty");
+    const fileStatus = document.getElementById("file-status");
+    const saveButton = document.getElementById("save-button");
+    const fileInput = document.getElementById("file-input");
+
+    let sourceText = "";
+    let sourceRows = [];
+    let guestRows = [];
+    let columnIndexes = null;
+    let selectedTable = null;
+    let fileHandle = null;
+    let fileName = "guest-list - seating-assignment.csv";
+
+    function parseCsv(text) {
+      const rows = [];
+      let fields = [];
+      let cursor = 0;
+
+      while (cursor < text.length) {
+        const start = cursor;
+        let value = "";
+        if (text[cursor] === '"') {
+          cursor += 1;
+          let closed = false;
+          while (cursor < text.length) {
+            if (text[cursor] === '"') {
+              if (text[cursor + 1] === '"') {
+                value += '"';
+                cursor += 2;
+              } else {
+                cursor += 1;
+                closed = true;
+                break;
+              }
+            } else {
+              value += text[cursor];
+              cursor += 1;
+            }
+          }
+          if (!closed) throw new Error("The CSV contains a quoted field that is not closed.");
+          if (cursor < text.length && ![",", "\r", "\n"].includes(text[cursor])) {
+            throw new Error("The CSV has unexpected text after a quoted field.");
+          }
+        } else {
+          while (cursor < text.length && ![",", "\r", "\n"].includes(text[cursor])) {
+            value += text[cursor];
+            cursor += 1;
+          }
+        }
+
+        fields.push({ value, start, end: cursor });
+        if (cursor === text.length) {
+          rows.push(fields);
+          break;
+        }
+        if (text[cursor] === ",") {
+          cursor += 1;
+          if (cursor === text.length) {
+            fields.push({ value: "", start: cursor, end: cursor });
+            rows.push(fields);
+          }
+        } else {
+          if (text[cursor] === "\r") cursor += 1;
+          if (text[cursor] === "\n") cursor += 1;
+          rows.push(fields);
+          fields = [];
+        }
+      }
+      return rows;
+    }
+
+    function csvField(value) {
+      return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+    }
+
+    function getField(row, name) {
+      return row.values[columnIndexes[name]] || "";
+    }
+
+    function setField(row, name, value) {
+      row.values[columnIndexes[name]] = value;
+    }
+
+    function rebuildModel(text) {
+      sourceText = text;
+      sourceRows = parseCsv(text).map(fields => ({ fields, values: fields.map(field => field.value) }));
+      const headers = sourceRows.length ? sourceRows[0].values : [];
+      const cleanHeader = value => value.replace(/^\uFEFF/, "").trim();
+      columnIndexes = {
+        first: headers.findIndex(value => cleanHeader(value) === "First Name"),
+        last: headers.findIndex(value => cleanHeader(value) === "Last Name"),
+        rsvp: headers.findIndex(value => cleanHeader(value) === "RSVP"),
+        table: headers.findIndex(value => cleanHeader(value) === "Table Assignment"),
+        seat: headers.findIndex(value => cleanHeader(value) === "Seat Assignment")
+      };
+      if (Object.values(columnIndexes).some(index => index < 0)) {
+        throw new Error("This CSV must include First Name, Last Name, RSVP, Table Assignment, and Seat Assignment columns.");
+      }
+      guestRows = sourceRows.slice(1).filter(row => {
+        const name = `${getField(row, "first")} ${getField(row, "last")}`.trim();
+        return name && SEATED_TABLES.includes(getField(row, "table").trim());
+      });
+    }
+
+    function changedCellCount() {
+      if (!columnIndexes) return 0;
+      let count = 0;
+      for (const row of sourceRows) {
+        for (const name of ["table", "seat"]) {
+          const index = columnIndexes[name];
+          if (row.fields[index] && row.values[index] !== row.fields[index].value) count += 1;
+        }
+      }
+      return count;
+    }
+
+    function buildSavedCsv() {
+      const patches = [];
+      for (const row of sourceRows) {
+        for (const name of ["table", "seat"]) {
+          const index = columnIndexes[name];
+          const field = row.fields[index];
+          if (field && row.values[index] !== field.value) {
+            patches.push({ start: field.start, end: field.end, value: csvField(row.values[index]) });
+          }
+        }
+      }
+      patches.sort((left, right) => right.start - left.start);
+      let output = sourceText;
+      for (const patch of patches) {
+        output = output.slice(0, patch.start) + patch.value + output.slice(patch.end);
+      }
+      return output;
+    }
+
+    function setMessage(message) {
+      const target = document.getElementById("edit-message");
+      if (target) target.textContent = message;
+    }
+
+    function updateSaveState(message) {
+      const dirty = changedCellCount() > 0;
+      saveButton.disabled = !sourceText || !dirty;
+      fileStatus.textContent = message || `${fileName}${dirty ? " · Unsaved changes" : " · Saved"}`;
+      fileStatus.classList.toggle("dirty", dirty);
+      if (dirty && !message) fileStatus.textContent = `${fileName} · Unsaved changes`;
+    }
+
+    function guestName(row) {
+      return `${getField(row, "first")} ${getField(row, "last")}`.trim();
+    }
+
+    function tableGuests(table) {
+      return guestRows.filter(row => getField(row, "table").trim() === table)
+        .sort((left, right) => {
+          const leftSeat = Number.parseInt(getField(left, "seat"), 10);
+          const rightSeat = Number.parseInt(getField(right, "seat"), 10);
+          const leftValue = Number.isFinite(leftSeat) ? leftSeat : Number.MAX_SAFE_INTEGER;
+          const rightValue = Number.isFinite(rightSeat) ? rightSeat : Number.MAX_SAFE_INTEGER;
+          return leftValue - rightValue || sourceRows.indexOf(left) - sourceRows.indexOf(right);
+        });
+    }
+
+    function addTableButton(table, kind, left, top, label = table) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `table-button ${kind}${selectedTable === table ? " selected" : ""}`;
+      button.style.left = `${left}%`;
+      button.style.top = `${top}%`;
+      button.setAttribute("aria-label", `${table === "Sweetheart" ? "Sweetheart table" : `Table ${table}`}, ${tableGuests(table).length} guests`);
+      button.title = `${table === "Sweetheart" ? "Sweetheart table" : `Table ${table}`} · ${tableGuests(table).length} guests`;
+      button.append(document.createTextNode(label));
+      const count = document.createElement("span");
+      count.className = "guest-count";
+      count.textContent = tableGuests(table).length;
+      button.append(count);
+      button.addEventListener("click", () => selectTable(table));
+      venue.append(button);
+    }
+
+    function renderFloorPlan() {
+      venue.querySelectorAll(".table-button").forEach(button => button.remove());
+      const rectColumns = [90, 200, 412, 522];
+      const xs = rectColumns.map(value => value / 612 * 100);
+      const topY = (1 - 640 / 792) * 100;
+      const bottomY = (1 - 560 / 792) * 100;
+      [2, 1, 5, 6].forEach((table, index) => addTableButton(String(table), "rect", xs[index], topY));
+      [3, 4, 7, 8].forEach((table, index) => addTableButton(String(table), "rect", xs[index], bottomY));
+      addTableButton("Sweetheart", "sweetheart", 50, 14.1, "Sweetheart");
+      const circleRows = [430, 326, 222];
+      let tableNumber = 9;
+      for (const x of [90, 200, 306, 412, 522]) {
+        for (const y of circleRows) {
+          addTableButton(String(tableNumber), "circle", x / 612 * 100, (1 - y / 792) * 100);
+          tableNumber += 1;
+        }
+      }
+      const total = guestRows.length;
+      document.getElementById("guest-total").textContent = sourceText ? `${total} seated guests` : "Open a CSV to see assignments";
+    }
+
+    function tableKind(table) {
+      if (table === "Sweetheart") return "sweetheart";
+      return RECT_TABLES.has(table) ? "rect" : "circle";
+    }
+
+    function diagramPosition(position, count, table, diagram) {
+      if (tableKind(table) === "circle") {
+        const angle = (90 - 360 / count * position) * Math.PI / 180;
+        const horizontalRadius = 42 * diagram.clientHeight / diagram.clientWidth;
+        return { left: 50 + horizontalRadius * Math.cos(angle), top: 50 - 42 * Math.sin(angle) };
+      }
+      if (tableKind(table) === "sweetheart") {
+        return { left: count === 1 ? 50 : 30 + 40 * position / (count - 1), top: 70 };
+      }
+      const leftCount = Math.ceil(count / 2);
+      const rightCount = count - leftCount;
+      const firstSide = position < leftCount;
+      const withinSide = firstSide ? position : rightCount - 1 - (position - leftCount);
+      const sideCount = firstSide ? leftCount : rightCount;
+      const fraction = (withinSide + 0.5) / Math.max(sideCount, 1);
+      return firstSide
+        ? { left: 30 + fraction * 40, top: 78 }
+        : { left: 30 + fraction * 40, top: 22 };
+    }
+
+    function renderDiagram(table, guests) {
+      const diagram = document.createElement("div");
+      diagram.className = "diagram";
+      diagram.setAttribute("aria-label", `Zoomed seating diagram for ${table}`);
+      const shape = document.createElement("div");
+      shape.className = `diagram-table ${tableKind(table)}`;
+      shape.textContent = table === "Sweetheart" ? "Sweetheart" : `Table ${table}`;
+      diagram.append(shape);
+
+      const capacity = Math.max(table === "Sweetheart" ? 2 : RECT_TABLES.has(table) ? 8 : 10, guests.length);
+      for (let index = 0; index < capacity; index += 1) {
+        const guest = guests[index];
+        const position = diagramPosition(index, capacity, table, diagram);
+        const label = document.createElement("div");
+        label.className = `seat-label ${tableKind(table)}-seat${guest ? "" : " open"}`;
+        label.style.left = `${position.left}%`;
+        label.style.top = `${position.top}%`;
+        const seat = guest ? getField(guest, "seat") || String(index + 1) : String(index + 1);
+        const number = document.createElement("strong");
+        number.textContent = `${seat}.`;
+        const name = document.createElement("span");
+        name.textContent = guest ? guestName(guest) : "Open";
+        label.append(number, name);
+        diagram.append(label);
+      }
+      return diagram;
+    }
+
+    function renderEditor() {
+      if (!selectedTable || !columnIndexes) return;
+      editorEmpty.hidden = true;
+      editorContent.hidden = false;
+      editorContent.replaceChildren();
+      const guests = tableGuests(selectedTable);
+
+      const top = document.createElement("div");
+      top.className = "editor-top";
+      const heading = document.createElement("div");
+      const title = document.createElement("h2");
+      title.textContent = selectedTable === "Sweetheart" ? "Sweetheart Table" : `Table ${selectedTable}`;
+      const meta = document.createElement("p");
+      meta.className = "table-meta";
+      const seats = selectedTable === "Sweetheart" ? 2 : RECT_TABLES.has(selectedTable) ? 8 : 10;
+      meta.textContent = `${guests.length} assigned · ${seats} standard seats${guests.length > seats ? ` · ${guests.length - seats} over capacity` : ""}`;
+      heading.append(title, meta);
+      const close = document.createElement("button");
+      close.type = "button";
+      close.className = "close-editor";
+      close.textContent = "×";
+      close.setAttribute("aria-label", "Close table editor");
+      close.addEventListener("click", () => {
+        selectedTable = null;
+        editorContent.hidden = true;
+        editorEmpty.hidden = false;
+        renderFloorPlan();
+      });
+      top.append(heading, close);
+      editorContent.append(top, renderDiagram(selectedTable, guests));
+
+      const rosterTitle = document.createElement("div");
+      rosterTitle.className = "roster-heading";
+      rosterTitle.innerHTML = "<span>Assignments</span><span>Change table or seat</span>";
+      const note = document.createElement("p");
+      note.className = "roster-note";
+      note.textContent = "Choosing an occupied seat swaps the two guests when that seat has one occupant.";
+      const labels = document.createElement("div");
+      labels.className = "column-labels";
+      labels.innerHTML = "<span>Guest</span><span>Table</span><span>Seat</span>";
+      const roster = document.createElement("div");
+      roster.className = "roster";
+
+      guests.forEach((row, position) => {
+        const line = document.createElement("div");
+        line.className = "guest-row";
+        const name = document.createElement("div");
+        name.className = "guest-name";
+        name.append(document.createTextNode(guestName(row)));
+        const rsvp = document.createElement("small");
+        rsvp.textContent = getField(row, "rsvp");
+        name.append(rsvp);
+
+        const tableSelect = document.createElement("select");
+        tableSelect.setAttribute("aria-label", `Table assignment for ${guestName(row)}`);
+        for (const table of SEATED_TABLES) {
+          const option = document.createElement("option");
+          option.value = table;
+          option.textContent = table === "Sweetheart" ? "Sweetheart" : `Table ${table}`;
+          option.selected = getField(row, "table").trim() === table;
+          tableSelect.append(option);
+        }
+        tableSelect.addEventListener("change", () => {
+          setField(row, "table", tableSelect.value);
+          renderAll();
+          setMessage(`${guestName(row)} moved to ${tableSelect.value === "Sweetheart" ? "the Sweetheart table" : `Table ${tableSelect.value}`}.`);
+        });
+
+        const seatInput = document.createElement("input");
+        seatInput.type = "number";
+        seatInput.min = "1";
+        seatInput.step = "1";
+        seatInput.inputMode = "numeric";
+        seatInput.value = getField(row, "seat");
+        seatInput.setAttribute("aria-label", `Seat assignment for ${guestName(row)}`);
+        seatInput.addEventListener("change", () => {
+          const requested = seatInput.value.trim();
+          if (requested && (!/^\d+$/.test(requested) || Number(requested) < 1)) {
+            seatInput.value = getField(row, "seat");
+            setMessage("Seat numbers must be positive whole numbers.");
+            return;
+          }
+          const currentTable = getField(row, "table").trim();
+          const previousSeat = getField(row, "seat");
+          const occupants = requested
+            ? tableGuests(currentTable).filter(other => other !== row && getField(other, "seat").trim() === requested)
+            : [];
+          if (occupants.length === 1) setField(occupants[0], "seat", previousSeat);
+          setField(row, "seat", requested);
+          renderAll();
+          setMessage(occupants.length > 1
+            ? `Seat ${requested} already has multiple guests; the assignment changed without an automatic swap.`
+            : occupants.length === 1 ? `Swapped ${guestName(row)} with ${guestName(occupants[0])}.` : "Seat assignment updated.");
+        });
+
+        line.append(name, tableSelect, seatInput);
+        roster.append(line);
+      });
+      const message = document.createElement("p");
+      message.className = "message";
+      message.id = "edit-message";
+      editorContent.append(rosterTitle, note, labels, roster, message);
+    }
+
+    function renderAll() {
+      renderFloorPlan();
+      if (selectedTable) renderEditor();
+      updateSaveState();
+    }
+
+    function selectTable(table) {
+      selectedTable = table;
+      renderFloorPlan();
+      renderEditor();
+    }
+
+    async function loadText(text, name, handle = null) {
+      const previousModel = { sourceText, sourceRows, guestRows, columnIndexes };
+      try {
+        rebuildModel(text);
+      } catch (error) {
+        sourceText = previousModel.sourceText;
+        sourceRows = previousModel.sourceRows;
+        guestRows = previousModel.guestRows;
+        columnIndexes = previousModel.columnIndexes;
+        updateSaveState(`Could not load CSV: ${error.message}`);
+        return;
+      }
+      fileHandle = handle;
+      fileName = name;
+      selectedTable = null;
+      editorContent.hidden = true;
+      editorEmpty.hidden = false;
+      renderAll();
+      fileStatus.textContent = `${fileName} · ${guestRows.length} seated guests`;
+      fileStatus.classList.remove("dirty");
+    }
+
+    document.getElementById("open-button").addEventListener("click", async () => {
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            multiple: false,
+            types: [{ description: "CSV files", accept: { "text/csv": [".csv"] } }]
+          });
+          const file = await handle.getFile();
+          await loadText(await file.text(), file.name, handle);
+        } catch (error) {
+          if (error.name !== "AbortError") fileStatus.textContent = `Could not open CSV: ${error.message}`;
+        }
+      } else {
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) await loadText(await file.text(), file.name);
+      fileInput.value = "";
+    });
+
+    saveButton.addEventListener("click", async () => {
+      if (!columnIndexes || changedCellCount() === 0) return;
+      const output = buildSavedCsv();
+      try {
+        if (fileHandle) {
+          const permission = await fileHandle.queryPermission({ mode: "readwrite" });
+          if (permission !== "granted" && await fileHandle.requestPermission({ mode: "readwrite" }) !== "granted") {
+            throw new Error("Write permission was not granted.");
+          }
+          const writable = await fileHandle.createWritable();
+          await writable.write(output);
+          await writable.close();
+        } else {
+          const blob = new Blob([output], { type: "text/csv;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const download = document.createElement("a");
+          download.href = url;
+          download.download = fileName;
+          document.body.append(download);
+          download.click();
+          download.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+        rebuildModel(output);
+        renderAll();
+        fileStatus.textContent = fileHandle ? `${fileName} · Saved` : `${fileName} · Downloaded updated copy`;
+        fileStatus.classList.remove("dirty");
+      } catch (error) {
+        fileStatus.textContent = `Save failed: ${error.message}`;
+        fileStatus.classList.add("dirty");
+      }
+    });
+
+    window.addEventListener("beforeunload", event => {
+      if (changedCellCount() > 0) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+
+    renderFloorPlan();
+  </script>
+</body>
+</html>
