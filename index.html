@@ -225,7 +225,8 @@
     .seat-label.conflict { border-color: #c9820f; background: #fdf0d8; box-shadow: 0 0 0 2px #f5c66d80; }
     .seat-label.conflict strong { color: #a15c00; }
 
-    .roster-heading { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 6px; color: var(--red-dark); font-size: 14px; }
+    .roster-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 6px; color: var(--red-dark); font-size: 14px; }
+    .roster-heading .reset-button { min-height: 30px; padding: 4px 9px; font-size: 12px; }
     .roster-note { margin: 0 0 9px; color: #795a52; font: 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     .roster { display: grid; gap: 5px; max-height: 42vh; overflow: auto; padding-right: 2px; }
     .guest-row {
@@ -700,10 +701,23 @@
 
       const rosterTitle = document.createElement("div");
       rosterTitle.className = "roster-heading";
-      rosterTitle.innerHTML = "<span>Assignments</span><span>Change table or seat</span>";
+      const assignmentsLabel = document.createElement("span");
+      assignmentsLabel.textContent = "Assignments";
+      const resetButton = document.createElement("button");
+      resetButton.type = "button";
+      resetButton.className = "button reset-button";
+      resetButton.textContent = "Reset seats";
+      resetButton.disabled = guests.length === 0;
+      resetButton.setAttribute("aria-label", `Renumber guests at ${selectedTable === "Sweetheart" ? "the Sweetheart table" : `Table ${selectedTable}`} from seat 1 in current order`);
+      resetButton.addEventListener("click", () => {
+        guests.forEach((guest, index) => setField(guest, "seat", String(index + 1)));
+        renderAll();
+        setMessage(`Renumbered ${guests.length} guests at ${selectedTable === "Sweetheart" ? "the Sweetheart table" : `Table ${selectedTable}`} from seat 1. Save to write the changes.`);
+      });
+      rosterTitle.append(assignmentsLabel, resetButton);
       const note = document.createElement("p");
       note.className = "roster-note";
-      note.textContent = "Drag one guest onto another to swap seats, or edit the table and seat below.";
+      note.textContent = "Reset numbers guests 1-N in current order. Drag one guest onto another to swap seats.";
       const labels = document.createElement("div");
       labels.className = "column-labels";
       labels.innerHTML = "<span>Guest</span><span>Table</span><span>Seat</span>";
