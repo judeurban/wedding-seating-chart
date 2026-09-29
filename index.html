@@ -213,6 +213,12 @@
       overflow: hidden;
       transform: translate(-50%, -50%);
     }
+    .seat-label[draggable="true"] { cursor: grab; user-select: none; }
+    .seat-label.dragging { opacity: .45; cursor: grabbing; }
+    .seat-label.drag-over { border-color: var(--red); box-shadow: 0 0 0 3px #a62c2533; }
+    @media (prefers-reduced-motion: no-preference) {
+      .seat-label { transition: box-shadow .15s ease, opacity .15s ease; }
+    }
     .seat-label.rect-seat, .seat-label.sweetheart-seat { width: 52px; }
     .seat-label strong { color: var(--red); font-size: 9px; }
     .seat-label.open { color: #927c70; font-style: italic; }
@@ -572,8 +578,8 @@
     function diagramPosition(position, count, table, diagram) {
       if (tableKind(table) === "circle") {
         const angle = (90 - 360 / count * position) * Math.PI / 180;
-        const horizontalRadius = 42 * diagram.clientHeight / diagram.clientWidth;
-        return { left: 50 + horizontalRadius * Math.cos(angle), top: 50 - 42 * Math.sin(angle) };
+        const horizontalRadius = 27;
+        return { left: 50 + horizontalRadius * Math.cos(angle), top: 50 - 39 * Math.sin(angle) };
       }
       if (tableKind(table) === "sweetheart") {
         return { left: count === 1 ? 50 : 10 + 80 * position / (count - 1), top: 78 };
@@ -608,6 +614,45 @@
         label.className = `seat-label ${tableKind(table)}-seat${guest ? "" : " open"}${inConflict ? " conflict" : ""}`;
         label.style.left = `${position.left}%`;
         label.style.top = `${position.top}%`;
+        if (guest) {
+          label.draggable = true;
+          label.title = `Drag ${guestName(guest)} to another seat to swap assignments`;
+          label.setAttribute("aria-label", `Seat ${getField(guest, "seat") || index + 1}, ${guestName(guest)}. Drag to another guest to swap seats. You can also edit the seat number below.`);
+          label.addEventListener("dragstart", event => {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", guestName(guest));
+            label.classList.add("dragging");
+          });
+          label.addEventListener("dragend", () => {
+            label.classList.remove("dragging");
+            diagram.querySelectorAll(".drag-over").forEach(target => target.classList.remove("drag-over"));
+          });
+          label.addEventListener("dragover", event => {
+            if (event.dataTransfer.types.includes("text/plain")) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              if (label !== diagram.querySelector(".dragging")) label.classList.add("drag-over");
+            }
+          });
+          label.addEventListener("dragleave", () => label.classList.remove("drag-over"));
+          label.addEventListener("drop", event => {
+            event.preventDefault();
+            label.classList.remove("drag-over");
+            const draggedLabel = diagram.querySelector(".dragging");
+            if (!draggedLabel || draggedLabel === label) return;
+            const draggedIndex = Number(draggedLabel.dataset.guestIndex);
+            const targetIndex = Number(label.dataset.guestIndex);
+            const draggedGuest = guests[draggedIndex];
+            const targetGuest = guests[targetIndex];
+            if (!draggedGuest || !targetGuest || draggedGuest === targetGuest) return;
+            const draggedSeat = getField(draggedGuest, "seat");
+            setField(draggedGuest, "seat", getField(targetGuest, "seat"));
+            setField(targetGuest, "seat", draggedSeat);
+            renderAll();
+            setMessage(`Swapped ${guestName(draggedGuest)} and ${guestName(targetGuest)}.`);
+          });
+          label.dataset.guestIndex = String(guests.indexOf(guest));
+        }
         const seat = guest ? getField(guest, "seat") || String(index + 1) : String(index + 1);
         const number = document.createElement("strong");
         number.textContent = `${seat}.`;
@@ -658,7 +703,7 @@
       rosterTitle.innerHTML = "<span>Assignments</span><span>Change table or seat</span>";
       const note = document.createElement("p");
       note.className = "roster-note";
-      note.textContent = "Choosing an occupied seat swaps the two guests when that seat has one occupant.";
+      note.textContent = "Drag one guest onto another to swap seats, or edit the table and seat below.";
       const labels = document.createElement("div");
       labels.className = "column-labels";
       labels.innerHTML = "<span>Guest</span><span>Table</span><span>Seat</span>";
